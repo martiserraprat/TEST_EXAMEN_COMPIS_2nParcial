@@ -1192,7 +1192,9 @@ function renderQuestion() {
       btn.className = 'option-btn';
       btn.dataset.letter = letter;
       if (state.studyRevealed) {
+        if (ans.answer === letter) btn.classList.add('selected');
         if (letter === q.ans) btn.classList.add('correct');
+        else if (ans.answer === letter) btn.classList.add('wrong');
         btn.disabled = true;
       }
       btn.innerHTML = `<span class="option-letter">${letter.toUpperCase()}</span><span>${escHtml(opt)}</span>`;
@@ -1270,6 +1272,9 @@ function studyPickOption(letter) {
   document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
   const sel = document.querySelector(`.option-btn[data-letter="${letter}"]`);
   if (sel) sel.classList.add('selected');
+  // Record the answer for stats
+  const q = state.questions[state.idx];
+  state.answers[state.idx] = { answer: letter, correct: (letter === q.ans) };
   // Auto-reveal immediately on click
   revealStudyAnswer();
 }
@@ -1302,8 +1307,12 @@ function revealStudyAnswer() {
   state.studyRevealed = true;
   const q = state.questions[state.idx];
 
+  // If the user pressed "Veure resposta" without picking, mark as skipped
+  if (state.answers[state.idx].answer === null) {
+    state.answers[state.idx].correct = null; // skipped
+  }
+
   // Mark options
-  const letters = ['a','b','c','d','e'];
   document.querySelectorAll('.option-btn').forEach(btn => {
     const letter = btn.dataset.letter;
     if (letter === q.ans) btn.classList.add('correct');
@@ -1375,25 +1384,43 @@ function showFeedback(correct) {
 confirmBtn.addEventListener('click', confirmAnswer);
 skipBtn.addEventListener('click', skipQuestion);
 
+// ─── SCORE CALCULATION (shared) ─────────────────────────────────────────────
+function computeStats() {
+  const total   = state.questions.length;
+  const correct = state.answers.filter(a => a.correct === true).length;
+  const wrong   = state.answers.filter(a => a.correct === false).length;
+  const skipped = state.answers.filter(a => a.correct === null).length;
+  const raw     = correct - wrong * 0.25;
+  const score10 = Math.max(0, Math.min(10, (raw / total) * 10));
+  return { total, correct, wrong, skipped, score10 };
+}
+
 // ─── STUDY SUMMARY ───────────────────────────────────────────────────────────
 function showStudySummary() {
   quizArea.style.display = 'none';
   resultsArea.style.display = 'block';
 
-  const total = state.questions.length;
-  document.getElementById('res-correct').textContent = total;
-  document.getElementById('res-wrong').textContent = '—';
-  document.getElementById('res-skipped').textContent = '—';
-  document.getElementById('res-score').textContent = '📖';
-  document.querySelector('.score-denom').textContent = '';
-  document.getElementById('ring-fill').style.strokeDashoffset = '0';
-  document.getElementById('ring-fill').style.stroke = '#6c8cff';
-  document.getElementById('res-grade').textContent = '✅ Sessió completada!';
+  document.querySelector('#res-wrong').closest('.stat-item').style.opacity = '1';
+  document.querySelector('#res-skipped').closest('.stat-item').style.opacity = '1';
+  document.querySelector('.score-denom').textContent = '/ 10';
+
+  const { total, correct, wrong, skipped, score10 } = computeStats();
+
+  document.getElementById('res-correct').textContent = correct;
+  document.getElementById('res-wrong').textContent   = wrong;
+  document.getElementById('res-skipped').textContent = skipped;
+  document.getElementById('res-score').textContent   = score10.toFixed(1);
+
+  document.getElementById('res-grade').textContent = '📖 Sessió completada!';
   document.getElementById('res-sub').textContent = `Has repassat ${total} preguntes. Ratxa màxima: ${state.studyStreak} 🔥`;
 
-  // Hide stats labels not relevant
-  document.querySelector('#res-wrong').closest('.stat-item').style.opacity = '0.3';
-  document.querySelector('#res-skipped').closest('.stat-item').style.opacity = '0.3';
+  const pct    = Math.max(0, Math.min(1, score10 / 10));
+  const circ   = 2 * Math.PI * 42;
+  const fill   = document.getElementById('ring-fill');
+  const colour = score10 >= 7 ? '#34d399' : score10 >= 5 ? '#fbbf24' : '#f87171';
+  fill.style.stroke = colour;
+  fill.style.strokeDashoffset = circ;
+  setTimeout(() => { fill.style.strokeDashoffset = circ * (1 - pct); }, 100);
 
   buildReviewList();
 }
@@ -1408,12 +1435,7 @@ function showResults() {
   document.querySelector('#res-skipped').closest('.stat-item').style.opacity = '1';
   document.querySelector('.score-denom').textContent = '/ 10';
 
-  const total   = state.questions.length;
-  const correct = state.answers.filter(a => a.correct === true).length;
-  const wrong   = state.answers.filter(a => a.correct === false).length;
-  const skipped = state.answers.filter(a => a.correct === null).length;
-  const raw     = correct - wrong * 0.25;
-  const score10 = Math.max(0, (raw / total) * 10);
+  const { total, correct, wrong, skipped, score10 } = computeStats();
 
   document.getElementById('res-correct').textContent = correct;
   document.getElementById('res-wrong').textContent   = wrong;
@@ -1434,6 +1456,7 @@ function showResults() {
   const fill   = document.getElementById('ring-fill');
   const colour = score10 >= 7 ? '#34d399' : score10 >= 5 ? '#fbbf24' : '#f87171';
   fill.style.stroke = colour;
+  fill.style.strokeDashoffset = circ;
   setTimeout(() => { fill.style.strokeDashoffset = circ * (1 - pct); }, 100);
 
   buildReviewList();
@@ -1457,17 +1480,14 @@ function buildReviewList() {
     const shortQ     = q.q.split('\n')[0].substring(0, 100) + (q.q.length > 100 ? '…' : '');
 
     let badge, badgeCls, ansInfo;
-    if (isStudy) {
-      badge = '📖 Repassada'; badgeCls = 'correct';
-      ansInfo = `<span class="ans-correct">Correcta: ${q.ans.toUpperCase()}</span>`;
-    } else if (isCorrect) {
+    if (isCorrect) {
       badge = '✓ Correcte'; badgeCls = 'correct';
       ansInfo = `<span class="ans-correct">Resposta: ${q.ans.toUpperCase()}</span>`;
     } else if (isWrong) {
       badge = '✗ Incorrecte'; badgeCls = 'wrong';
       ansInfo = `<span class="ans-wrong">Tu: ${a.answer.toUpperCase()}</span> · <span class="ans-correct">Correcta: ${q.ans.toUpperCase()}</span>`;
     } else {
-      badge = '— Saltada'; badgeCls = 'skipped';
+      badge = isStudy ? '— No respost' : '— Saltada'; badgeCls = 'skipped';
       ansInfo = `<span>Correcta: ${q.ans.toUpperCase()}</span>`;
     }
 
