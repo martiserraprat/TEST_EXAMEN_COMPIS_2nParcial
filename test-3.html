@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Compiladors · UAB</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2435;
+    --border: #2a3045;
+    --accent: #6c8cff;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --muted2: #94a3b8;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* LAYOUT */
+  .app { max-width: 860px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: rgba(108,140,255,0.12);
+    border: 1px solid rgba(108,140,255,0.25);
+    padding: 4px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  h1 span { color: var(--accent); }
+
+  /* CONFIG PANEL */
+  .config-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+
+  .config-panel h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+
+  .filter-group {
+    margin-bottom: 20px;
+  }
+
+  .filter-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted2);
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .pill:hover { border-color: var(--accent); color: var(--accent); }
+  .pill.active {
+    background: rgba(108,140,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .pill.topic-mem.active {
+    background: rgba(167,139,250,0.15);
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+  .pill.topic-gen.active {
+    background: rgba(52,211,153,0.15);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .start-btn {
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 11px 28px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .start-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .start-btn:active { transform: translateY(0); }
+
+  .question-count-info {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 14px;
+    font-family: var(--mono);
+  }
+  .question-count-info b { color: var(--accent); }
+
+  /* QUIZ AREA */
+  #quiz-area { display: none; }
+
+  .progress-bar-wrap {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 4px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .q-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .q-meta-left {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .q-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .q-tag.mem { background: rgba(167,139,250,0.15); color: var(--accent2); border: 1px solid rgba(167,139,250,0.3); }
+  .q-tag.gen { background: rgba(52,211,153,0.15); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+  .q-tag.year { background: rgba(108,140,255,0.1); color: var(--accent); border: 1px solid rgba(108,140,255,0.2); }
+
+  .q-number {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+
+  .question-text {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 20px;
+    line-height: 1.65;
+  }
+
+  .code-block {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 14px 0;
+    overflow-x: auto;
+    white-space: pre;
+    color: #a8b4d8;
+    line-height: 1.7;
+  }
+
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .option-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 13px 16px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+    width: 100%;
+    font-family: var(--sans);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(108,140,255,0.07);
+  }
+
+  .option-letter {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted2);
+    margin-top: 1px;
+    transition: all 0.15s;
+  }
+
+  .option-btn.selected {
+    border-color: var(--accent);
+    background: rgba(108,140,255,0.1);
+  }
+  .option-btn.selected .option-letter {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .option-btn.correct {
+    border-color: var(--green);
+    background: rgba(52,211,153,0.1);
+  }
+  .option-btn.correct .option-letter {
+    background: var(--green);
+    border-color: var(--green);
+    color: #000;
+  }
+
+  .option-btn.wrong {
+    border-color: var(--red);
+    background: rgba(248,113,113,0.08);
+  }
+  .option-btn.wrong .option-letter {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+  }
+
+  .option-btn.show-correct {
+    border-color: var(--green);
+    background: rgba(52,211,153,0.07);
+  }
+  .option-btn.show-correct .option-letter {
+    background: rgba(52,211,153,0.2);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .option-btn:disabled { cursor: default; }
+
+  .feedback-bar {
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .feedback-bar.correct { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3); color: var(--green); }
+  .feedback-bar.wrong { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: var(--red); }
+
+  .nav-btns {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .nav-btn {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nav-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .nav-btn.primary:hover { opacity: 0.88; }
+  .nav-btn.secondary {
+    background: transparent;
+    color: var(--muted2);
+  }
+  .nav-btn.secondary:hover { border-color: var(--muted2); color: var(--text); }
+
+  /* RESULTS */
+  #results-area { display: none; }
+
+  .results-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 36px;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .score-ring {
+    width: 110px;
+    height: 110px;
+    margin: 0 auto 20px;
+    position: relative;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring-bg { fill: none; stroke: var(--surface2); stroke-width: 8; }
+  .score-ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.8s ease; }
+  .score-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .score-num {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .score-denom {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .results-grade {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .results-sub {
+    font-size: 14px;
+    color: var(--muted2);
+    margin-bottom: 28px;
+  }
+
+  .stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .stat-num.g { color: var(--green); }
+  .stat-num.r { color: var(--red); }
+  .stat-num.y { color: var(--yellow); }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+  .review-list { margin-bottom: 28px; }
+  .review-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 10px;
+    text-align: left;
+  }
+  .review-item.r-correct { border-left: 3px solid var(--green); }
+  .review-item.r-wrong { border-left: 3px solid var(--red); }
+  .review-item.r-skipped { border-left: 3px solid var(--yellow); }
+
+  .review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .review-q {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+  }
+  .review-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .review-badge.correct { background: rgba(52,211,153,0.15); color: var(--green); }
+  .review-badge.wrong { background: rgba(248,113,113,0.12); color: var(--red); }
+  .review-badge.skipped { background: rgba(251,191,36,0.12); color: var(--yellow); }
+
+  .review-answers {
+    font-size: 12px;
+    color: var(--muted2);
+    font-family: var(--mono);
+  }
+  .review-answers span.ans-correct { color: var(--green); }
+  .review-answers span.ans-wrong { color: var(--red); }
+
+  .results-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .results-h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+
+  /* MODE TOGGLE */
+  .mode-toggle {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    gap: 4px;
+    width: fit-content;
+  }
+  .mode-btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted2);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .mode-btn.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .mode-btn.active.test-mode { color: var(--accent); }
+  .mode-btn.active.study-mode { color: #f59e0b; }
+
+  /* STUDY CARD REVEAL */
+  .study-reveal {
+    margin-top: 16px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(52,211,153,0.3);
+    background: rgba(52,211,153,0.07);
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .study-reveal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-bottom: 1px solid rgba(52,211,153,0.2);
+  }
+  .study-reveal-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .study-reveal-answer {
+    padding: 14px 18px;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .study-reveal-answer strong {
+    font-family: var(--mono);
+    color: var(--green);
+    font-size: 13px;
+  }
+
+  .study-hint-btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+  }
+  .study-hint-btn:hover { border-color: var(--green); color: var(--green); }
+
+  /* STUDY STATS */
+  .study-streak {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted2);
+  }
+  .study-streak b { color: var(--yellow); }
+
+  /* RESPONSIVE */
+  @media(max-width: 600px) {
+    .question-card { padding: 18px; }
+    .config-panel { padding: 18px; }
+    header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">UAB · Compiladors</div>
+    <h1>Test <span>Teoria</span> — Segon Parcial</h1>
+  </header>
+
+  <!-- CONFIG -->
+  <div id="config-area">
+    <div class="config-panel">
+      <h2>Configuració del test</h2>
+
+      <div class="filter-group">
+        <span class="filter-label">Anys</span>
+        <div class="pill-group" id="year-pills">
+          <div class="pill active" data-val="all">Tots</div>
+          <div class="pill" data-val="20-21">20-21</div>
+          <div class="pill" data-val="21-22">21-22</div>
+          <div class="pill" data-val="22-23">22-23</div>
+          <div class="pill" data-val="23-24">23-24</div>
+          <div class="pill" data-val="24-25">24-25</div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">Tema</span>
+        <div class="pill-group" id="topic-pills">
+          <div class="pill active" data-val="all">Tot</div>
+          <div class="pill topic-mem" data-val="mem">Organització de Memòria</div>
+          <div class="pill topic-gen" data-val="gen">Generació de Codi</div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">Mode</span>
+        <div class="mode-toggle">
+          <button class="mode-btn test-mode active" id="btn-mode-test">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+            Test
+          </button>
+          <button class="mode-btn study-mode" id="btn-mode-study">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            Estudiar
+          </button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">Ordre</span>
+        <div class="pill-group" id="order-pills">
+          <div class="pill active" data-val="sequential">Seqüencial</div>
+          <div class="pill" data-val="random">Aleatori</div>
+        </div>
+      </div>
+
+      <div class="question-count-info" id="q-count-info">
+        Preguntes seleccionades: <b id="q-count">75</b>
+      </div>
+
+      <br>
+      <button class="start-btn" id="start-btn">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+        Comença el test
+      </button>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quiz-area">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+    </div>
+
+    <div class="q-meta">
+      <div class="q-meta-left">
+        <span class="q-tag" id="q-tag-topic"></span>
+        <span class="q-tag year" id="q-tag-year"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <span class="study-streak" id="study-streak-display" style="display:none">🔥 <b id="streak-count">0</b></span>
+        <span class="q-number" id="q-number"></span>
+      </div>
+    </div>
+
+    <div class="question-card">
+      <div class="question-text" id="question-text"></div>
+      <div class="options-list" id="options-list"></div>
+    </div>
+
+    <div class="feedback-bar" id="feedback-bar"></div>
+
+    <div class="nav-btns" id="nav-btns-test">
+      <button class="nav-btn primary" id="confirm-btn">Confirmar</button>
+      <button class="nav-btn secondary" id="skip-btn">Saltar</button>
+    </div>
+    <div class="nav-btns" id="nav-btns-study" style="display:none">
+      <button class="nav-btn primary" id="study-show-btn">Veure resposta</button>
+      <button class="nav-btn secondary" id="study-next-btn">Següent</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results-area">
+    <div class="results-card">
+      <div class="score-ring">
+        <svg viewBox="0 0 100 100" width="110" height="110">
+          <circle class="score-ring-bg" cx="50" cy="50" r="42"/>
+          <circle class="score-ring-fill" id="ring-fill" cx="50" cy="50" r="42"
+            stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+        </svg>
+        <div class="score-center">
+          <div class="score-num" id="res-score">0.0</div>
+          <div class="score-denom">/ 10</div>
+        </div>
+      </div>
+      <div class="results-grade" id="res-grade"></div>
+      <div class="results-sub" id="res-sub"></div>
+      <div class="stats-row">
+        <div class="stat-item"><div class="stat-num g" id="res-correct">0</div><div class="stat-label">Correctes</div></div>
+        <div class="stat-item"><div class="stat-num r" id="res-wrong">0</div><div class="stat-label">Errònies</div></div>
+        <div class="stat-item"><div class="stat-num y" id="res-skipped">0</div><div class="stat-label">Saltades</div></div>
+      </div>
+    </div>
+
+    <div class="results-h2">Revisió detallada</div>
+    <div class="review-list" id="review-list"></div>
+
+    <div class="results-actions">
+      <button class="nav-btn primary" id="retry-btn">Torna a fer el test</button>
+      <button class="nav-btn secondary" id="back-config-btn">Canviar configuració</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const QUESTIONS = [
+  // ══ 20-21 ══════════════════════════════════════════════════════════════════
+  {year:"20-21",topic:"mem",q:"¿En qué caso no genera el compilador direcciones simbólicas?",
+    opts:["Variables locales.","Variables globales.","Funciones y procedimientos.","Métodos.","Ninguna de las anteriores."],ans:"a"},
+  {year:"20-21",topic:"mem",q:"¿Cuánto ocupa y a qué valor está alineada la estructura b?\n\nstruct a { double m_a1; char m_a2; int m_a3; };\nstruct b { char m_b1; struct a m_b2; };",
+    opts:["Tamaño: 24, alineación: 8.","Tamaño: 32, alineación: 16.","Tamaño: 24, alineación: 16.","Tamaño: 32, alineación: 8.","Ninguna de las anteriores."],ans:"a"},
+  {year:"20-21",topic:"mem",q:"¿Cuál es el máximo número de elementos en pila que tenemos a la vez mientras evaluamos la expresión 10*2 + 4*3 + 2*3*4?",
+    opts:["4","3","5","6","Ninguna de las anteriores."],ans:"b"},
+  {year:"20-21",topic:"mem",q:"¿Cuántas conversiones de tipo se realizan al evaluar la siguiente expresión 10*2.0 + 4 + 15/2?",
+    opts:["4","3","5","2","Ninguna de las anteriores."],ans:"a"},
+  {year:"20-21",topic:"mem",q:"La organización de memoria de un programa se decide…",
+    opts:["En tiempo de compilación.","En tiempo de ejecución.","En la declaración de tipos de datos.","En la declaración de variables.","Ninguna de las anteriores."],ans:"a"},
+  {year:"20-21",topic:"mem",q:"Los segmentos de memoria mínimos que necesita un programa imperativo para ejecutarse son:",
+    opts:["Segmento de datos estáticos, Segmento de código, pila de contexto, pila de argumentos y heap.","Segmento de código, pila de backtracking, trail, pila de unificación y heap.","Segmento de datos estáticos, Segmento de código y pila de ejecución.","Segmento de código y pila de ejecución.","Ninguna de las anteriores."],ans:"c"},
+  {year:"20-21",topic:"mem",q:"¿En qué afecta la organización de memoria al programar en C o C++?",
+    opts:["Es mejor no declarar arrays grandes como variables locales para evitar llenar la pila de ejecución.","Es mejor declarar los campos de los structs y clases de mayor a menor tamaño.","a) y b).","a), b) y utilizar preferiblemente arrays de tamaño variable que de tamaño fijo.","Ninguna de las anteriores."],ans:"c"},
+  {year:"20-21",topic:"mem",q:"¿Cuándo se utiliza el display del bloque de activación de una función?",
+    opts:["Se utiliza para acceder a las variables locales de la función.","Se utiliza para acceder a las variables globales del programa.","En el caso de los métodos se utiliza para acceder a los campos del objeto sobre el que se aplica el método.","Se utiliza para acceder a variables locales de la función madre donde se ha definido la función que se está ejecutando, y así sucesivamente.","Ninguna de las anteriores."],ans:"d"},
+  {year:"20-21",topic:"mem",q:"¿Para qué se utilizan las tablas virtuales de una clase?",
+    opts:["Para obtener la dirección de los métodos enlazados estáticamente.","Para obtener la dirección de los métodos enlazados dinámicamente.","Para aplicar métodos a objetos guardados en variables locales.","Para aplicar métodos a objetos guardados en variables globales.","Ninguna de las anteriores."],ans:"b"},
+  {year:"20-21",topic:"gen",q:"¿Cuáles de las siguientes instrucciones se usan para crear un display?",
+    opts:["IPushAdressBVar.","IPushGVar.","IPushB.","a) y c)","Ninguna de las anteriores."],ans:"c"},
+  {year:"20-21",topic:"gen",q:"¿Cuál es el código correcto que ha de generar el compilador de LOOS para el procedimiento main? (var a: integer; Var b:real; a = 3; b = a + 5.0;)",
+    opts:["(a): ILink 8 / IPushLit 4 3 / IPopGVar a / IPushGVar a / IIntToReal / IPushLit 8 5.0 / IAddReal / IPopBVar 8 -8",
+          "(b): ILink 12 / IPushLit 4 3 / IPopBVar 4 -4 / IPushBVar 4 -4 / IIntToReal / IPushLit 8 5.0 / IAddReal / IPopBVar 8 -12",
+          "(c): ILink 8 / IPushLit 4 3 / IPushGVar a / IPopGVar a / ...",
+          "(d): ILink 8 / IPushLit 4 3 / IPushBVar 4 -4 / IPopBVar 4 -4 / ...",
+          "Ninguna de las anteriores."],ans:"a"},
+  {year:"20-21",topic:"gen",q:"¿Cuál es el bloque de activación correcto para la función f1?\nfunction f1(j:real, k:^array[2] of array[3] of real):array[2] of array[3] of real { var a: array[3] of array[2] of real; ... }",
+    opts:["(a): B+112 / B+64: VR / B+16: k / B+8: j / B+4: PC / B: ED / B-48: a",
+          "(b): B+24 / B+20: VR / B+16: k / B+8: j / B+4: ED / B: PC / B-48: a",
+          "(c): B+24 / B+20: VR / B+16: k / B+8: j / B+4: PC / B: ED / B-48: a",
+          "(d): B+68 / B+20: VR / B+16: k / B+8: j / B+4: PC / B: ED / B-48: a",
+          "Ninguna de las anteriores."],ans:"c"},
+  {year:"20-21",topic:"gen",q:"Las instrucciones de código máquina que se utilizan para generar el código de las instrucciones de control de flujo son:",
+    opts:["IJmp, IJmpTrue e IJmpFalse.","ICall e IRet.","ILess, ILessEq, IGreater, IGreaterEq, IEqual, INotEqual para los distintos tipos de datos.","c), IOr, IAnd e INot.","Ninguna de las anteriores."],ans:"a"},
+  {year:"20-21",topic:"gen",q:"En LOOS/C++ ¿cuándo se ha de utilizar el constructor por copiar en la entrada y salida de funciones?",
+    opts:["Para copiar los parámetros por valor.","Para copiar los parámetros por referencia.","Para copiar los parámetros por valor y a la salida de las funciones para copiar el valor de retorno.","Para copiar los parámetros por referencia y a la salida de las funciones para copiar el valor de retorno.","Ninguna de las anteriores."],ans:"c"},
+  {year:"20-21",topic:"gen",q:"¿En qué momentos de la ejecución de un programa se utilizan los destructores?",
+    opts:["Al salir de un ámbito local para destruir las variables locales del ámbito.","Al retornar de una función para destruir los parámetros de la función.","Al finalizar la ejecución de un programa para destruir las variables globales.","Todas las anteriores","Ninguna de las anteriores."],ans:"d"},
+
+  // ══ 21-22 ══════════════════════════════════════════════════════════════════
+  {year:"21-22",topic:"mem",q:"¿Qué elementos de memoria forman la máquina virtual para ejecutar programas imperativos?",
+    opts:["Segmento de código, segmento de datos, pila de ejecución y heap opcionalmente.","Segmento de código, segmento de datos, pila de parámetros, pila de bloques de activación y heap opcionalmente.","Segmento de código, segmento de datos y heap opcionalmente.","Segmento de código, segmento de datos estáticos y segmento de datos dinámico.","Ninguna de las anteriores."],ans:"a"},
+  {year:"21-22",topic:"mem",q:"¿Cuándo se incorporan las funciones de una librería a un programa?",
+    opts:["Las funciones de una librería se incorporan al ejecutable del programa.","Las funciones de una librería se incorporan al espacio de memoria del programa al ejecutarse.","a) para librerías estáticas y b) para librerías dinámicas.","a) para librerías dinámicas y b) para librerías estáticas.","Ninguna de las anteriores."],ans:"c"},
+  {year:"21-22",topic:"mem",q:"¿Cuánto ocupa y a qué valor está alineado la estructura c?\nstruct a { int m_a1; char m_a2; double m_a3; };\nunion b { real m_b1; char m_b2; };\nstruct c { struct a m_c1; char m_c2; union b m_c3; };",
+    opts:["Tamaño: 24, alineación: 8.","Tamaño: 32, alineación: 16.","Tamaño: 32, alineación: 8.","Tamaño: 36, alineación: 16.","Ninguna de las anteriores."],ans:"c"},
+  {year:"21-22",topic:"mem",q:"¿Cuántos elementos tendremos a la vez en la pila cuando estamos evaluando la expresión 5*4*3 + 2*5 + 1?",
+    opts:["3.","4.","2.","5.","Ninguna de las anteriores."],ans:"a"},
+  {year:"21-22",topic:"mem",q:"¿Cuál de las siguientes frases es más correcta?",
+    opts:["Los displays se usan para acceder a bloques de activación de funciones y métodos de ámbitos más globales que el actual.","Los displays se usan para acceder a bloques de activación de funciones y procedimientos de ámbitos más globales que el actual.","Los displays se usan para acceder a bloques de activación de funciones y procedimientos de otros ámbitos.","Los displays se usan para acceder a bloques de activación de funciones y métodos de otros ámbitos.","Ninguna de las anteriores."],ans:"c"},
+  {year:"21-22",topic:"mem",q:"¿Cuantos apuntadores contendrá el display de una función?",
+    opts:["El número de separadores de ámbito que haya en la pila de la tabla de símbolos antes que la entrada de la función.","El número de separadores de ámbito de función que haya en la pila de la tabla de símbolos antes que la entrada de la función.","El número de separadores de ámbito que haya en la pila de la tabla de símbolos al empezar a compilar el cuerpo de la función.","a) y c) ya que dan el mismo valor.","Ninguna de las anteriores."],ans:"b"},
+  {year:"21-22",topic:"mem",q:"El bloque de activación de un método de LOOS contiene como máximo:",
+    opts:["Parámetros, display, pc, enlace dinámico (B), variables locales.","Valor de retorno o apuntador al valor de retorno, parámetros, display, pc, enlace dinámico (B), variables locales.","Valor de retorno o apuntador al valor de retorno, parámetros, display, this, pc, enlace dinámico (B), variables locales.","Valor de retorno o apuntador al valor de retorno, parámetros, this, pc, enlace dinámico (B), variables locales.","Ninguna de las anteriores."],ans:"d"},
+  {year:"21-22",topic:"gen",q:"¿Cuándo se genera el código de acceso a una variable que aparece en una expresión?",
+    opts:["En cuanto se analiza su identificador.","En cuanto se sabe si se quiere leer o escribir el valor de la variable.","En cuanto se sabe si se quiere leer, escribir el valor de la variable u obtener su dirección.","En cuanto se acaba de compilar <expressio>.","Ninguna de las anteriores."],ans:"c"},
+  {year:"21-22",topic:"gen",q:"¿Qué instrucciones aparecen en el código que genera el compilador de LOOS para el procedimiento main?\nprocedure main(){ var a: array[2] of array[3] of integer; a[2][1] = 2; }",
+    opts:["IPushLit, IPopBVar, IPushInd, IMultInt, IAddInt.","IPushLit, IPushBVar, IPopInd, IMultInt, IAddInt.","IPushLit, IPopBVar, IPopInd, IMultInt, IAddInt.","IPushLit, IPushBVar, IPushInd, IMultInt, IAddInt.","Ninguna de las anteriores."],ans:"e"},
+  {year:"21-22",topic:"gen",q:"En LOOS, el valor de retorno de una función se encuentra en:",
+    opts:["El bloque de activación de la función que es llamada.","El bloque de activación que llama a la función.","a) y b) cuando la función devuelve un tipo de dato simple.","a) o b) cuando la función devuelve un tipo de dato compuesto.","Ninguna de las anteriores."],ans:"d"},
+  {year:"21-22",topic:"gen",q:"En una llamada a una función local:",
+    opts:["El display lo calcula el código de entrada a la función.","El display lo calcula el código de salida de la función.","El display lo calcula el código que llama a la función.","b) y c).","Ninguna de las anteriores."],ans:"c"},
+  {year:"21-22",topic:"gen",q:"¿Qué queda en la pila cuando acaba de llamarse a una función local?:",
+    opts:["Variables locales, parámetros y valor de retorno.","Display, parámetros y valor de retorno.","Variables locales, display, parámetros y valor de retorno.","Parámetros y valor de retorno.","Ninguna de las anteriores."],ans:"b"},
+  {year:"21-22",topic:"gen",q:"¿Qué puede pasar al realizar una asignación en LOOS a=b?",
+    opts:["Copiar la memoria de b sobre a.","Copiar parte de la memoria de b sobre a.","Llamar a un asignador de la clase a.","Todas las anteriores.","Ninguna de las anteriores."],ans:"d"},
+  {year:"21-22",topic:"gen",q:"¿Al realizar la llamada f(a) que código se generará para el parámetro a?",
+    opts:["Si se pasa por valor se pone una copia del valor de a en la pila.","Si se pasa por referencia se pone la dirección de a en la pila.","Se puede llamar al constructor por copia de a para ponerlo en la pila.","Todas las anteriores.","Ninguna de las anteriores."],ans:"d"},
+  {year:"21-22",topic:"gen",q:"¿Que código genera un ámbito de llaves { … }?",
+    opts:["Ninguno, ya que solo agrupa instrucciones.","La destrucción de las variables que se hayan declarado en su interior.","IUnlink, IRet.","IJmp …","Ninguna de las anteriores."],ans:"b"},
+
+  // ══ 22-23 ══════════════════════════════════════════════════════════════════
+  {year:"22-23",topic:"mem",q:"Per quins elements està formada la màquina abstracta per l'execució de programes imperatius?",
+    opts:["Segment de codi, segment de dades estàtic, pila, heap, Registre PC i registre base del bloc d'activació.",
+          "Segment de codi, segment de dades estàtic, pila, heap, registre PC, registre base, registre display i registre d'activació de capturadors d'excepcions.",
+          "Segment de codi, segment de dades estàtic, pila, heap, registre PC, registre base i registre d'activació de capturadores d'excepcions.",
+          "Segment de codi, segment de dades estàtic, pila, heap i registre PC.",
+          "Cap de les anteriors."],ans:"a"},
+  {year:"22-23",topic:"mem",q:"La sortida del compilador és?",
+    opts:["Un fitxer objecte format per segments.","Un fitxer objecte format per trossos de memòria.","Una llibreria estàtica formada per fitxers objecte.","Una llibreria dinàmica formada per segments.","Cap de les anteriors."],ans:"b"},
+  {year:"22-23",topic:"mem",q:"El compilador genera adreces...",
+    opts:["relatives a l'inici del segment de dades o codi.","absolutes de memòria.","simbòliques.","relatives al comptador de programa.","Cap de les anteriors."],ans:"c"},
+  {year:"22-23",topic:"mem",q:"Quin és l'alineament que han de complir els objectes d'una classe?",
+    opts:["Han d'estar alineats a una adreça múltiple de la mida dels objectes de la classe.",
+          "Han d'estar alineats a una adreça múltiple del màxim alineament dels tipus de dades simples que contenen.",
+          "Han d'estar alineats a una adreça múltiple del mínim alineament dels camps que els componen.",
+          "Han d'estar alineats a una adreça divisora del màxim alineament dels camps que els componen.",
+          "Cap de les anteriors."],ans:"b"},
+  {year:"22-23",topic:"mem",q:"Si a LOOS s'avalua l'expressió 10*3+4.5-2, quina serà la mida màxima de la pila en bytes durant l'avaluació?",
+    opts:["4 bytes","8 bytes","16 bytes","24 bytes","Cap de les anteriors."],ans:"c"},
+  {year:"22-23",topic:"mem",q:"Per a una funció local de LOOS quin serà el contingut del seu bloc d'activació?",
+    opts:["Valor de retorn, arguments, display, PC de retorn, Enllaç dinàmic, variables locals.",
+          "Valor de retorn, arguments, display, this, PC de retorn, Enllaç dinàmic, variables locals.",
+          "Valor de retorn, arguments, PC de retorn, Enllaç dinàmic, variables locals.",
+          "Arguments, PC de retorn, Enllaç dinàmic, variables locals.",
+          "Cap de les anteriors."],ans:"a"},
+  {year:"22-23",topic:"mem",q:"A què apunta l'enllaç dinàmic del bloc d'activació d'una funció?",
+    opts:["Al codi de la funció que l'ha cridat.","Al bloc d'activació de la funció que l'ha cridat.","Al codi de la funció on s'ha definit.","Al bloc d'activació de la funció on s'ha definit.","Cap de les anteriors."],ans:"b"},
+  {year:"22-23",topic:"mem",q:"Com podem saber la mida del display d'un procediment?",
+    opts:["La mida del display es calcula en temps d'execució i correspon al nombre de crides niuades.",
+          "La mida del display es calcula en temps de compilació i correspon al nombre de separadors de funció que hi ha a la taula de símbols en el moment d'afegir l'entrada de la taula de símbols del procediment.",
+          "La mida del display es calcula en temps de compilació i correspon al nombre de separadors de funció que hi ha a la taula de símbols quan estem compilant el cos de la funció.",
+          "La mida del display es calcula en temps d'execució i correspon al nombre de separadors de funció que hi ha a la taula de símbols quan estem executant la funció.",
+          "Cap de les anteriors."],ans:"b"},
+  {year:"22-23",topic:"gen",q:"Quan volem fer un càlcul amb un valor com el podem posar a la pila?",
+    opts:["IPushLit mida valor, IPushBVar mida desplaçament, IPushGVar mida adreça.",
+          "IPushLit valor, IPushBVar desplaçament, IPushGVar adreça, IPushDispVar nivell desplaçament, IPushInd.",
+          "IPushLit mida valor, IPushBVar mida desplaçament, IPushGVar mida adreça, IPushDispVar mida nivell desplaçament, IPushInd mida.",
+          "IPushLit mida valor, IPushBVar mida adreça, IPushGVar mida desplaçament, IPushDispVar mida desplaçament mida, IPushInd mida.",
+          "Cap de les anteriors."],ans:"c"},
+  {year:"22-23",topic:"gen",q:"On es guarden els resultats intermedis de les expressions a LOOS?",
+    opts:["A la pila.",
+          "Pels tipus de dades simples a la pila i pels tipus de dades compostos als blocs d'activació.",
+          "Pels tipus de dades compostos a la pila i pels tipus de dades simples als blocs d'activació.",
+          "Pels tipus de dades simples a la pila i pels tipus de dades compostos al segment de dades.",
+          "Cap de les anteriors."],ans:"b"},
+  {year:"22-23",topic:"gen",q:"Quin codi genera la instrucció return expressió?",
+    opts:["Avaluar expressió, assignar el resultat al VR o &VR, IUnlink, IRet",
+          "Avaluar expressió, construir per còpia el resultat a VR o &VR, IUnlink, IRet",
+          "Avaluar expressió, assignar el resultat al VR o &VR, destruir variables locals, IUnlink, IRet",
+          "Avaluar expressió, construir per còpia el resultat a VR o &VR, destruir variables locals, IUnlink, IRet",
+          "Cap de les anteriors."],ans:"d"},
+  {year:"22-23",topic:"gen",q:"Quin codi pot generar la instrucció while expressió do instrucció?",
+    opts:["L1: avaluar expressió, IJmpFalse L2, codi instrucció, IJmp L1, L2:",
+          "IJmp L1, L2: instrucció, L1: avaluar expressió, IJmpTrue L2",
+          "a) i b)",
+          "L1: avaluar expressió, IJmpTrue L2, codi instrucció, IJmp L1, L2:",
+          "Cap de les anteriors."],ans:"c"},
+  {year:"22-23",topic:"gen",q:"Quan podem generar el codi que posa el valor d'una variable a la pila?",
+    opts:["Quan apareix l'identificador de la variable dintre d'una expressió.",
+          "Més endavant de l'aparició de l'identificador de la variable dintre d'una expressió. Quan sabem que es vol el valor de la variable (cod.PushValue()).",
+          "Quan apareix l'identificador de la variable dintre d'una expressió i no hi ha darrere el símbol = d'assignació.",
+          "Quan apareix l'identificador de la variable dintre d'una expressió que és el paràmetre d'una funció.",
+          "Cap de les anteriors."],ans:"c"},
+  {year:"22-23",topic:"gen",q:"Com es pot representar l'adreça d'una variable?",
+    opts:["etiqueta, desplaçament.",
+          "RefEtiqueta(etiqueta), desplaçament.",
+          "RefEtiqueta(etiqueta), (nivell, desplaçament).",
+          "etiqueta, (nivell, desplaçament).",
+          "Cap de les anteriors."],ans:"d"},
+  {year:"22-23",topic:"gen",q:"En generar el codi de LOOS <factor> + <factor> quines instruccions genera <Terme>?",
+    opts:["codi <factor> IAddInt codi <factor>",
+          "codi <factor> IIntToReal IAddReal codi <factor>",
+          "codi <factor> IAddReal codi <factor> IIntToReal",
+          "Totes les anteriors",
+          "Cap de les anteriors."],ans:"e"},
+
+  // ══ 23-24 ══════════════════════════════════════════════════════════════════
+  {year:"23-24",topic:"mem",q:"Quins elements de la màquina abstracta per l'execució de programes imperatius són memòria estàtica i quins memòria dinàmica?",
+    opts:["Memòria estàtica: segment de codi, segment de dades; memòria dinàmica: pila d'execució, heap.",
+          "Memòria estàtica: segment de dades, heap; memòria dinàmica: pila d'execució, segment de codi.",
+          "Memòria estàtica: segment de codi, segment de dades, heap; memòria dinàmica: pila d'execució.",
+          "Memòria estàtica: segment de codi; memòria dinàmica: segment de dades, pila d'execució, heap.",
+          "Cap de les anteriors."],ans:"a"},
+  {year:"23-24",topic:"mem",q:"Quins elements d'un programa tenen adreces simbòliques?",
+    opts:["Variables i funcions.","Variables globals i funcions.","Variables globals, funcions globals i taules virtuals.","Variables globals, funcions i taules virtuals.","Cap de les anteriors."],ans:"d"},
+  {year:"23-24",topic:"mem",q:"Quines propietats tenen els trossos de segment generats pel compilador?",
+    opts:["Segment, mida, contingut opcional, una o més adreces simbòliques, taula de reubicació.",
+          "Segment, mida, contingut opcional, alineament, una o més adreces simbòliques.",
+          "Segment, mida, contingut, alineament, una o més adreces simbòliques.",
+          "Segment, mida, contingut opcional, alineament.",
+          "Cap de les anteriors."],ans:"b"},
+  {year:"23-24",topic:"mem",q:"Quina és la diferència entre l'enllaçat i el microenllaçat?",
+    opts:["Son dos mètodes d'enllaçat diferents que no tenen efecte sobre els executables que generen.",
+          "L'enllaçat l'aplica el vinculador i el microenllaçat l'aplica el carregador de processos del sistema operatiu.",
+          "EL microenllaçat l'aplica el vinculador i l'enllaçat l'aplica el carregador de processos del sistema operatiu.",
+          "L'enllaçat pot generar executables més grans que el microenllaçat.",
+          "Cap de les anteriors."],ans:"d"},
+  {year:"23-24",topic:"mem",q:"En quin ordre s'organitzen els elements d'un objecte?",
+    opts:["Apuntador a la taula virtual, objectes de les classes base, camps de la classe.",
+          "Apuntador a la taula virtual, objectes de les classes base, camps de la classe, apuntadors als mètodes.",
+          "Apuntador a la taula virtual, apuntadors als objectes de les classes base, camps de la classe.",
+          "Taula virtual, objectes de les classes base, camps de la classe.",
+          "Cap de les anteriors."],ans:"a"},
+  {year:"23-24",topic:"mem",q:"Quines condicions complirà un struct alineat?",
+    opts:["Els seus camps estaran alineats segons el seu tipus de dades.",
+          "Els seus camps estaran alineats segons el seu tipus de dades i l'adreça base tindrà l'alineament més gran dels seus camps.",
+          "Els seus camps estaran alineats segons el seu tipus de dades, l'adreça base tindrà l'alineament més gran dels seus camps i la seva mida serà un múltiple de l'alineament més gran dels seus camps.",
+          "Els seus camps estaran alineats segons el seu tipus de dades i l'adreça base tindrà l'alineament del primer camp.",
+          "Cap de les anteriors."],ans:"c"},
+  {year:"23-24",topic:"mem",q:"Quin és el nombre màxim d'elements que contindrà la pila per avaluar l'expressió 1+2+10+20-3*(5-6+7)*2*5?",
+    opts:["2","3","4","5","Cap de les anteriors."],ans:"c"},
+  {year:"23-24",topic:"mem",q:"A què apunta l'enllaç dinàmic del bloc d'activació d'una funció?",
+    opts:["Al codi de la funció que l'ha cridat.","Al bloc d'activació de la funció que l'ha cridat.","Al codi de la funció on s'ha definit.","Al bloc d'activació de la funció on s'ha definit.","Cap de les anteriors."],ans:"b"},
+  {year:"23-24",topic:"mem",q:"Quines formes de creació del display s'utilitzen en una crida a una funció?",
+    opts:["Cas 1: Copia tot o part del display de la funció que fa la crida al final de pila. Cas 2: Copiar tot el display i posar al final de la pila la base del bloc d'activació.",
+          "Cas 1: Copia part del display i posar al final de la pila la base. Cas 2: Copiar tot el display.",
+          "Cas 1: Copia part o tot del display al final de pila. Cas 2: Posar al final de la pila la base del bloc d'activació.",
+          "Cas 1: Posar al final de la pila la base. Cas 2: Copia part o tot el display i posar la base.",
+          "Cap de les anteriors."],ans:"a"},
+  {year:"23-24",topic:"mem",q:"A quins procediments pot cridar p4? (p1 > p2 > p3; p1 > p4 > p5; p1 > p4 > p6 > p7)",
+    opts:["p1, p4, p5, p6.","p1, p2, p4, p5, p6, p7.","p1, p2, p4, p5, p6.","p1, p2, p3, p4, p5, p6, p7.","Cap de les anteriors."],ans:"c"},
+  {year:"23-24",topic:"gen",q:"Quin és el millor codi que podem generar per while <expressió> do <instrucció>?",
+    opts:["L1: Codi[<expressió>] / IJmpFalse L2 / Codi[<instrucció>] / IJmp L1 / L2:",
+          "L1: Codi[<instrucció>] / Codi[<expressió>] / IJmpTrue L1",
+          "IJmp L2 / L1: Codi[<instrucció>] / L2: Codi[<expressió>] / IJmpTrue L1",
+          "L1: Codi[<expressió>] / Codi[<instrucció>] / IJmpFalse L1",
+          "Cap de les anteriors."],ans:"c"},
+  {year:"23-24",topic:"gen",q:"Per què és necessari cridar a cod.PushValue() per assegurar que el resultat d'una expressió està a la pila?",
+    opts:["Perquè en generar el codi d'una expressió no se sap que es vol fer amb el resultat: llegir el seu valor, assignar-li un nou valor o obtenir la seva adreça.",
+          "Perquè posar un valor a la pila és una operació que ens podem estalviar si no es farà res amb el resultat.",
+          "Perquè en el cas que el resultat sigui un tipus de dades compost, aquest es guarda en una variable local.",
+          "Perquè volem evitar que els resultats de les expressions simples passin per la pila.",
+          "Cap de les anteriors."],ans:"a"},
+  {year:"23-24",topic:"gen",q:"Per què es necessiten dos codis en generació per compilar una suma?",
+    opts:["Per guardar el codi que calcula el valor de cada terme de la suma.",
+          "a) i s'ha de considerar que si la suma té més de dos termes, es necessitaran més codis.",
+          "Per poder introduir les conversions de tipus de dades entre els codis dels termes de la suma.",
+          "Un per guardar el codi que s'ha generat abans de la suma i l'altre pel codi de la suma.",
+          "Cap de les anteriors."],ans:"c"},
+  {year:"23-24",topic:"gen",q:"Quina diferència aporta generar codi amb dreceres per les operacions booleanes and i or?",
+    opts:["El codi amb dreceres és equivalent al codi sense, ja que dona el mateix resultat.",
+          "El codi amb dreceres pot ser més ràpid.",
+          "El codi amb dreceres pot estalviar el càlcul del segon fins a l'últim operand de l'operació booleana.",
+          "b) i c).",
+          "Cap de les anteriors."],ans:"d"},
+  {year:"23-24",topic:"gen",q:"Com es pot representar l'adreça d'una variable, camp o paràmetre?",
+    opts:["etiqueta, desplaçament.",
+          "etiqueta, (nivell, desplaçament).",
+          "RefEtiqueta(etiqueta), desplaçament, codi que la calcula.",
+          "RefEtiqueta(etiqueta), (nivell, desplaçament), codi que la calcula.",
+          "Cap de les anteriors."],ans:"d"},
+
+  // ══ 24-25 ══════════════════════════════════════════════════════════════════
+  {year:"24-25",topic:"mem",q:"Quins són els elements indispensables d'una màquina abstracta per executar llenguatges imperatius?",
+    opts:["Segment de codi, segment de dades, pila. Registres: PC, B.",
+          "Segment de codi, segment de dades, pila d'execució, pila de la taula de símbols. Registres: PC, B.",
+          "Segment de codi, segment de dades, pila, heap. Registres: PC, B.",
+          "Segment de codi, segment de dades, pila. Registres: PC.",
+          "Cap de les anteriors."],ans:"a"},
+  {year:"24-25",topic:"mem",q:"Quins elements d'un programa generen trossos de memòria?",
+    opts:["Definició de funcions, declaració de variables locals.",
+          "Definició de funcions, declaració de variables globals, declaració de tipus de dades.",
+          "Prototips de funcions, declaració de variables, declaració de classes.",
+          "Definició de funcions, declaració de variables globals.",
+          "Cap de les anteriors."],ans:"d"},
+  {year:"24-25",topic:"mem",q:"Quins trossos de memòria formaran un executable resultant del vinculat?",
+    opts:["Tots els trossos dels fitxers objecte i els trossos referenciats de llibreries dinàmiques.",
+          "Tots els trossos dels fitxers objecte i els trossos referenciats de llibreries estàtiques.",
+          "Tots els trossos referenciats dels fitxers objecte i de les llibreries estàtiques.",
+          "Tots els trossos referenciats dels fitxers objecte i de les llibreries estàtiques i dinàmiques.",
+          "Cap de les anteriors."],ans:"b"},
+  {year:"24-25",topic:"mem",q:"Si d'una classe amb mètodes virtuals en deriven 5 classes i tenim 10 objectes de la classe base i 2 objectes de cada classe derivada. Quantes taules virtuals crearà el compilador?",
+    opts:["5","6","10","20","Cap de les anteriors."],ans:"b"},
+  {year:"24-25",topic:"mem",q:"Si un compilador alinea les dades, com poden reduir l'ús de memòria?",
+    opts:["Ordenant els camps de més gran a més petit als structs i les classes.",
+          "Ordenant els camps de més petit a més gran als structs i les classes.",
+          "Ordenant els camps de més gran a més petit als structs, les unions i les classes.",
+          "Ordenant els camps de més petit a més gran als structs, les unions i les classes.",
+          "Cap de les anteriors."],ans:"a"},
+  {year:"24-25",topic:"mem",q:"Quin recorregut de l'arbre abstracte d'una expressió s'aproxima millor l'ordre d'execució de les operacions?",
+    opts:["Inordre (fill 1, pare, fill 2).","Inordre invertit (fill 2, pare, fill 1).","Preordre (pare, fills).","Postordre (fills, pare).","Cap de les anteriors."],ans:"d"},
+  {year:"24-25",topic:"mem",q:"Quants bytes ocupa en memòria la següent estructura? (char:1; int:4; double:8)\nstruct myStruct { int a; double b; union myUnion { int d; double e; } c; double f; };",
+    opts:["32 bytes","28 bytes","36 bytes","24 bytes","Cap de les anteriors."],ans:"a"},
+  {year:"24-25",topic:"mem",q:"Quina és la mida del bloc d'activació del main? (var a:integer; var b:real; var c:array[2] of array[3] of real; function f1(a1:integer,b1:real):array[2] of array[3] of real)",
+    opts:["60","52","76","64","Cap de les anteriors."],ans:"e"},
+  {year:"24-25",topic:"mem",q:"On és c[1][1] respecte a la base del bloc d'activació del main?",
+    opts:["-28","-20","-36","-24","Cap de les anteriors."],ans:"a"},
+  {year:"24-25",topic:"gen",q:"Quina de les columnes de codi és correcta per la instrucció return d; dins de function f1?\n(d és array[2] of array[3] of real, VR és al desplaçament 24 del display nivell 0)",
+    opts:["(a): IPopBVar 16 -16 / IPopDispVar 24 16 0 / IUnlink / IRet / IUnlink / IRet",
+          "(b): IUnlink / IRet / IUnlink / IRet",
+          "(c): IPushBVar 16 -16 / IPopDispVar 16 24 0 / IUnlink / IRet / IUnlink / IRet",
+          "(d): IPopBVar 16 -16 / IPopDispVar 16 24 0 / IUnlink / IRet / IUnlink / IRet",
+          "Cap de les anteriors."],ans:"e"},
+  {year:"24-25",topic:"gen",q:"Quan podem decidir si necessitem l'adreça o el valor del resultat d'una expressió?",
+    opts:["En compilar l'expressió.",
+          "Segons el lloc de la gramàtica on es trobi el símbol no terminal <expressió>.",
+          "b) i segons la informació que ens doni la taula de símbols sobre on es troba <expressió>.",
+          "En executar l'expressió.",
+          "Cap de les anteriors."],ans:"c"},
+  {year:"24-25",topic:"gen",q:"Al copiar un valor pot passar...",
+    opts:["Es copi un bloc de memòria.",
+          "Es cridi un constructor per còpia.",
+          "a) o b).",
+          "a) o b) però múltiples cops.",
+          "Cap de les anteriors."],ans:"d"},
+  {year:"24-25",topic:"gen",q:"Quantes etiquetes s'han de crear per implementar un bucle while, un if sense else i un if amb else?",
+    opts:["while 1, if 1, if else 1.","while 2, if 1, if else 2.","while 1, if 1, if else 2.","while 2, if 2, if else 2.","Cap de les anteriors."],ans:"b"},
+  {year:"24-25",topic:"gen",q:"Quines de les següents instruccions NO és imprescindible quan es crida a una funció?",
+    opts:["IAddSP -mida_retorn.","Posar l'enllaç dinàmic a la pila.","IUnlink.","Totes són imprescindibles.","Cap de les anteriors."],ans:"a"},
+  {year:"24-25",topic:"gen",q:"Quin codi es genera quan sortim d'un procediment?",
+    opts:["Destrucció dels arguments passats per referència.",
+          "Destrucció de les variables que s'hagin declarat a l'interior.",
+          "Salt incondicional a la següent adreça del codi principal.",
+          "Crida al destructor per còpia dels objectes que s'hagin creat al interior.",
+          "Cap de les anteriors."],ans:"b"},
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = {
+  selectedYears: ['all'],
+  selectedTopic: 'all',
+  order: 'sequential',
+  mode: 'test',          // 'test' | 'study'
+  questions: [],
+  idx: 0,
+  answers: [],           // test mode: {answer, correct}
+  confirmed: false,
+  studyRevealed: false,  // study mode: has the answer been revealed?
+  studyStreak: 0,
+};
+
+function getFilteredQuestions() {
+  let qs = QUESTIONS.slice();
+  if (!state.selectedYears.includes('all'))
+    qs = qs.filter(q => state.selectedYears.includes(q.year));
+  if (state.selectedTopic !== 'all')
+    qs = qs.filter(q => q.topic === state.selectedTopic);
+  if (state.order === 'random')
+    qs = qs.sort(() => Math.random() - 0.5);
+  return qs;
+}
+
+// ─── DOM REFS ────────────────────────────────────────────────────────────────
+const configArea   = document.getElementById('config-area');
+const quizArea     = document.getElementById('quiz-area');
+const resultsArea  = document.getElementById('results-area');
+
+const yearPills  = document.querySelectorAll('#year-pills .pill');
+const topicPills = document.querySelectorAll('#topic-pills .pill');
+const orderPills = document.querySelectorAll('#order-pills .pill');
+const qCountEl   = document.getElementById('q-count');
+const startBtn   = document.getElementById('start-btn');
+
+const progressBar   = document.getElementById('progress-bar');
+const qTagTopic     = document.getElementById('q-tag-topic');
+const qTagYear      = document.getElementById('q-tag-year');
+const qNumber       = document.getElementById('q-number');
+const questionText  = document.getElementById('question-text');
+const optionsList   = document.getElementById('options-list');
+const feedbackBar   = document.getElementById('feedback-bar');
+const confirmBtn    = document.getElementById('confirm-btn');
+const skipBtn       = document.getElementById('skip-btn');
+const navBtnsTest   = document.getElementById('nav-btns-test');
+const navBtnsStudy  = document.getElementById('nav-btns-study');
+const studyShowBtn  = document.getElementById('study-show-btn');
+const studyNextBtn  = document.getElementById('study-next-btn');
+const streakDisplay = document.getElementById('study-streak-display');
+const streakCount   = document.getElementById('streak-count');
+const retryBtn      = document.getElementById('retry-btn');
+const backConfigBtn = document.getElementById('back-config-btn');
+
+// ─── MODE TOGGLE ─────────────────────────────────────────────────────────────
+document.getElementById('btn-mode-test').addEventListener('click', () => setMode('test'));
+document.getElementById('btn-mode-study').addEventListener('click', () => setMode('study'));
+
+function setMode(m) {
+  state.mode = m;
+  document.getElementById('btn-mode-test').classList.toggle('active', m === 'test');
+  document.getElementById('btn-mode-study').classList.toggle('active', m === 'study');
+  startBtn.textContent = m === 'study' ? '📖 Comença a estudiar' : '▶ Comença el test';
+}
+
+// ─── PILL LOGIC ──────────────────────────────────────────────────────────────
+function setupPillGroup(pills, multi, onChange) {
+  pills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      const val = pill.dataset.val;
+      if (multi) {
+        if (val === 'all') {
+          pills.forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          onChange(['all']);
+        } else {
+          const allPill = [...pills].find(p => p.dataset.val === 'all');
+          allPill.classList.remove('active');
+          pill.classList.toggle('active');
+          const active = [...pills].filter(p => p.classList.contains('active')).map(p => p.dataset.val);
+          if (active.length === 0) { allPill.classList.add('active'); onChange(['all']); }
+          else onChange(active);
+        }
+      } else {
+        pills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        onChange(val);
+      }
+    });
+  });
+}
+
+setupPillGroup(yearPills,  true,  v => { state.selectedYears = v; updateQCount(); });
+setupPillGroup(topicPills, false, v => { state.selectedTopic = v; updateQCount(); });
+setupPillGroup(orderPills, false, v => { state.order = v; });
+
+function updateQCount() { qCountEl.textContent = getFilteredQuestions().length; }
+updateQCount();
+
+// ─── START ───────────────────────────────────────────────────────────────────
+startBtn.addEventListener('click', () => {
+  state.questions = getFilteredQuestions();
+  if (!state.questions.length) return;
+  state.idx = 0;
+  state.answers = state.questions.map(() => ({ answer: null, correct: null }));
+  state.confirmed = false;
+  state.studyRevealed = false;
+  state.studyStreak = 0;
+  configArea.style.display = 'none';
+  resultsArea.style.display = 'none';
+  quizArea.style.display = 'block';
+  renderQuestion();
+});
+
+// ─── RENDER QUESTION ─────────────────────────────────────────────────────────
+function renderQuestion() {
+  const q     = state.questions[state.idx];
+  const total = state.questions.length;
+  const ans   = state.answers[state.idx];
+  const isStudy = state.mode === 'study';
+
+  // Progress
+  progressBar.style.width = (state.idx / total * 100) + '%';
+  qNumber.textContent = `${state.idx + 1} / ${total}`;
+
+  // Streak (study only)
+  if (isStudy) {
+    streakDisplay.style.display = 'flex';
+    streakCount.textContent = state.studyStreak;
+  } else {
+    streakDisplay.style.display = 'none';
+  }
+
+  // Tags
+  qTagTopic.textContent = q.topic === 'mem' ? 'Org. Memòria' : 'Generació Codi';
+  qTagTopic.className = 'q-tag ' + q.topic;
+  qTagYear.textContent = q.year;
+
+  // Question text
+  questionText.innerHTML = buildQuestionHtml(q.q);
+
+  // Nav buttons
+  navBtnsTest.style.display  = isStudy ? 'none' : 'flex';
+  navBtnsStudy.style.display = isStudy ? 'flex' : 'none';
+
+  // Options
+  const letters = ['a','b','c','d','e'];
+  optionsList.innerHTML = '';
+  feedbackBar.style.display = 'none';
+
+  if (isStudy) {
+    // In study mode, render plain clickable options — no right/wrong until revealed
+    q.opts.forEach((opt, i) => {
+      const letter = letters[i];
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.dataset.letter = letter;
+      if (state.studyRevealed) {
+        if (ans.answer === letter) btn.classList.add('selected');
+        if (letter === q.ans) btn.classList.add('correct');
+        else if (ans.answer === letter) btn.classList.add('wrong');
+        btn.disabled = true;
+      }
+      btn.innerHTML = `<span class="option-letter">${letter.toUpperCase()}</span><span>${escHtml(opt)}</span>`;
+      if (!state.studyRevealed) btn.addEventListener('click', () => studyPickOption(letter));
+      optionsList.appendChild(btn);
+    });
+
+    // Reveal block
+    if (state.studyRevealed) {
+      renderStudyReveal(q);
+      studyShowBtn.style.display = 'none';
+      studyNextBtn.textContent = state.idx < total - 1 ? 'Següent →' : 'Veure resum';
+    } else {
+      studyShowBtn.style.display = '';
+      studyNextBtn.textContent = state.idx < total - 1 ? 'Saltar →' : 'Acabar';
+    }
+
+  } else {
+    // TEST MODE
+    q.opts.forEach((opt, i) => {
+      const letter = letters[i];
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.dataset.letter = letter;
+      if (ans.answer === letter) btn.classList.add('selected');
+      if (state.confirmed) {
+        if (letter === q.ans) btn.classList.add('correct');
+        else if (ans.answer === letter) btn.classList.add('wrong');
+        btn.disabled = true;
+      }
+      btn.innerHTML = `<span class="option-letter">${letter.toUpperCase()}</span><span>${escHtml(opt)}</span>`;
+      btn.addEventListener('click', () => selectOption(letter));
+      optionsList.appendChild(btn);
+    });
+
+    if (state.confirmed) {
+      showFeedback(ans.correct);
+      confirmBtn.textContent = state.idx < total - 1 ? 'Següent' : 'Veure resultats';
+      confirmBtn.onclick = nextQuestion;
+      skipBtn.style.display = 'none';
+    } else {
+      confirmBtn.textContent = 'Confirmar';
+      confirmBtn.onclick = confirmAnswer;
+      skipBtn.style.display = '';
+    }
+  }
+}
+
+function buildQuestionHtml(text) {
+  const parts = text.split('\n');
+  let html = '', inCode = false, codeLines = [];
+  parts.forEach(line => {
+    const isCode = /^(struct|function|procedure|var |[A-Z][A-Z]|B\+|B\-|main:|[a-z]+:|\s*\/\/)/.test(line.trim()) && line.trim().length > 0;
+    if (isCode && !inCode)  { inCode = true; codeLines = [line]; }
+    else if (isCode)        { codeLines.push(line); }
+    else if (!isCode && inCode) {
+      html += `<div class="code-block">${codeLines.map(l => escHtml(l)).join('\n')}</div>`;
+      inCode = false; codeLines = [];
+      if (line.trim()) html += `<p>${escHtml(line)}</p>`;
+    } else {
+      if (line.trim()) html += `<p>${escHtml(line)}</p>`;
+    }
+  });
+  if (inCode) html += `<div class="code-block">${codeLines.map(l => escHtml(l)).join('\n')}</div>`;
+  return html;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── STUDY MODE LOGIC ────────────────────────────────────────────────────────
+function studyPickOption(letter) {
+  // Highlight selection before reveal
+  document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+  const sel = document.querySelector(`.option-btn[data-letter="${letter}"]`);
+  if (sel) sel.classList.add('selected');
+  // Record the answer for stats
+  const q = state.questions[state.idx];
+  state.answers[state.idx] = { answer: letter, correct: (letter === q.ans) };
+  // Auto-reveal immediately on click
+  revealStudyAnswer();
+}
+
+function renderStudyReveal(q) {
+  const letters = ['a','b','c','d','e'];
+  const ansIdx  = letters.indexOf(q.ans);
+  const ansText = q.opts[ansIdx] || '';
+  const existing = document.getElementById('study-reveal-block');
+  if (existing) existing.remove();
+
+  const div = document.createElement('div');
+  div.id = 'study-reveal-block';
+  div.className = 'study-reveal';
+  div.innerHTML = `
+    <div class="study-reveal-header">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>
+      <span class="study-reveal-label">Resposta correcta</span>
+    </div>
+    <div class="study-reveal-answer">
+      <strong>${q.ans.toUpperCase()})</strong> ${escHtml(ansText)}
+    </div>`;
+  optionsList.after(div);
+}
+
+studyShowBtn.addEventListener('click', revealStudyAnswer);
+
+function revealStudyAnswer() {
+  if (state.studyRevealed) return;
+  state.studyRevealed = true;
+  const q = state.questions[state.idx];
+
+  // If the user pressed "Veure resposta" without picking, mark as skipped
+  if (state.answers[state.idx].answer === null) {
+    state.answers[state.idx].correct = null; // skipped
+  }
+
+  // Mark options
+  document.querySelectorAll('.option-btn').forEach(btn => {
+    const letter = btn.dataset.letter;
+    if (letter === q.ans) btn.classList.add('correct');
+    else if (btn.classList.contains('selected')) btn.classList.add('wrong');
+    btn.disabled = true;
+  });
+
+  renderStudyReveal(q);
+  studyShowBtn.style.display = 'none';
+  studyNextBtn.textContent = state.idx < state.questions.length - 1 ? 'Següent →' : 'Veure resum';
+
+  // Streak: did user pick correctly before hitting "show"?
+  const selected = document.querySelector('.option-btn.selected.correct');
+  if (selected) { state.studyStreak++; }
+  else { state.studyStreak = 0; }
+  streakCount.textContent = state.studyStreak;
+}
+
+studyNextBtn.addEventListener('click', () => {
+  state.studyRevealed = false;
+  const reveal = document.getElementById('study-reveal-block');
+  if (reveal) reveal.remove();
+  state.idx++;
+  if (state.idx >= state.questions.length) showStudySummary();
+  else renderQuestion();
+});
+
+// ─── TEST MODE LOGIC ─────────────────────────────────────────────────────────
+function selectOption(letter) {
+  if (state.confirmed) return;
+  state.answers[state.idx].answer = letter;
+  document.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected'));
+  const sel = document.querySelector(`.option-btn[data-letter="${letter}"]`);
+  if (sel) sel.classList.add('selected');
+}
+
+function confirmAnswer() {
+  const ans = state.answers[state.idx];
+  if (!ans.answer) { skipQuestion(); return; }
+  state.confirmed = true;
+  ans.correct = (ans.answer === state.questions[state.idx].ans);
+  renderQuestion();
+}
+
+function skipQuestion() {
+  state.answers[state.idx].answer = null;
+  state.answers[state.idx].correct = null;
+  nextQuestion();
+}
+
+function nextQuestion() {
+  state.idx++;
+  if (state.idx >= state.questions.length) showResults();
+  else { state.confirmed = false; renderQuestion(); }
+}
+
+function showFeedback(correct) {
+  feedbackBar.style.display = 'flex';
+  if (correct) {
+    feedbackBar.className = 'feedback-bar correct';
+    feedbackBar.innerHTML = `<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg> Correcte!`;
+  } else {
+    const q = state.questions[state.idx];
+    feedbackBar.className = 'feedback-bar wrong';
+    feedbackBar.innerHTML = `<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" d="M18 6L6 18M6 6l12 12"/></svg> Incorrecte — la resposta correcta era <b style="margin-left:4px">${q.ans.toUpperCase()}</b>`;
+  }
+}
+
+confirmBtn.addEventListener('click', confirmAnswer);
+skipBtn.addEventListener('click', skipQuestion);
+
+// ─── SCORE CALCULATION (shared) ─────────────────────────────────────────────
+function computeStats() {
+  const total   = state.questions.length;
+  const correct = state.answers.filter(a => a.correct === true).length;
+  const wrong   = state.answers.filter(a => a.correct === false).length;
+  const skipped = state.answers.filter(a => a.correct === null).length;
+  const raw     = correct - wrong * 0.25;
+  const score10 = Math.max(0, Math.min(10, (raw / total) * 10));
+  return { total, correct, wrong, skipped, score10 };
+}
+
+// ─── STUDY SUMMARY ───────────────────────────────────────────────────────────
+function showStudySummary() {
+  quizArea.style.display = 'none';
+  resultsArea.style.display = 'block';
+
+  document.querySelector('#res-wrong').closest('.stat-item').style.opacity = '1';
+  document.querySelector('#res-skipped').closest('.stat-item').style.opacity = '1';
+  document.querySelector('.score-denom').textContent = '/ 10';
+
+  const { total, correct, wrong, skipped, score10 } = computeStats();
+
+  document.getElementById('res-correct').textContent = correct;
+  document.getElementById('res-wrong').textContent   = wrong;
+  document.getElementById('res-skipped').textContent = skipped;
+  document.getElementById('res-score').textContent   = score10.toFixed(1);
+
+  document.getElementById('res-grade').textContent = '📖 Sessió completada!';
+  document.getElementById('res-sub').textContent = `Has repassat ${total} preguntes. Ratxa màxima: ${state.studyStreak} 🔥`;
+
+  const pct    = Math.max(0, Math.min(1, score10 / 10));
+  const circ   = 2 * Math.PI * 42;
+  const fill   = document.getElementById('ring-fill');
+  const colour = score10 >= 7 ? '#34d399' : score10 >= 5 ? '#fbbf24' : '#f87171';
+  fill.style.stroke = colour;
+  fill.style.strokeDashoffset = circ;
+  setTimeout(() => { fill.style.strokeDashoffset = circ * (1 - pct); }, 100);
+
+  buildReviewList();
+}
+
+// ─── TEST RESULTS ────────────────────────────────────────────────────────────
+function showResults() {
+  quizArea.style.display = 'none';
+  resultsArea.style.display = 'block';
+
+  // Reset any study-summary opacity changes
+  document.querySelector('#res-wrong').closest('.stat-item').style.opacity = '1';
+  document.querySelector('#res-skipped').closest('.stat-item').style.opacity = '1';
+  document.querySelector('.score-denom').textContent = '/ 10';
+
+  const { total, correct, wrong, skipped, score10 } = computeStats();
+
+  document.getElementById('res-correct').textContent = correct;
+  document.getElementById('res-wrong').textContent   = wrong;
+  document.getElementById('res-skipped').textContent = skipped;
+  document.getElementById('res-score').textContent   = score10.toFixed(1);
+
+  let grade, sub;
+  if      (score10 >= 9) { grade = '🏆 Excel·lent'; sub = 'Domini excel·lent de la matèria.'; }
+  else if (score10 >= 7) { grade = '✅ Notable'; sub = 'Bon nivell, segueix practicant!'; }
+  else if (score10 >= 5) { grade = '📘 Aprovat'; sub = 'Superat, però hi ha marge de millora.'; }
+  else                   { grade = '📖 Suspès'; sub = 'Repassa els temes i torna-ho a intentar.'; }
+
+  document.getElementById('res-grade').textContent = grade;
+  document.getElementById('res-sub').textContent   = sub;
+
+  const pct    = Math.max(0, Math.min(1, score10 / 10));
+  const circ   = 2 * Math.PI * 42;
+  const fill   = document.getElementById('ring-fill');
+  const colour = score10 >= 7 ? '#34d399' : score10 >= 5 ? '#fbbf24' : '#f87171';
+  fill.style.stroke = colour;
+  fill.style.strokeDashoffset = circ;
+  setTimeout(() => { fill.style.strokeDashoffset = circ * (1 - pct); }, 100);
+
+  buildReviewList();
+}
+
+function buildReviewList() {
+  const reviewList = document.getElementById('review-list');
+  reviewList.innerHTML = '';
+  const isStudy = state.mode === 'study';
+
+  state.questions.forEach((q, i) => {
+    const a = state.answers[i];
+    const isCorrect = a.correct === true;
+    const isWrong   = a.correct === false;
+    const isSkipped = a.correct === null;
+
+    const div = document.createElement('div');
+    div.className = 'review-item ' + (isCorrect ? 'r-correct' : isWrong ? 'r-wrong' : 'r-skipped');
+
+    const topicLabel = q.topic === 'mem' ? 'Memòria' : 'Codi';
+    const shortQ     = q.q.split('\n')[0].substring(0, 100) + (q.q.length > 100 ? '…' : '');
+
+    let badge, badgeCls, ansInfo;
+    if (isCorrect) {
+      badge = '✓ Correcte'; badgeCls = 'correct';
+      ansInfo = `<span class="ans-correct">Resposta: ${q.ans.toUpperCase()}</span>`;
+    } else if (isWrong) {
+      badge = '✗ Incorrecte'; badgeCls = 'wrong';
+      ansInfo = `<span class="ans-wrong">Tu: ${a.answer.toUpperCase()}</span> · <span class="ans-correct">Correcta: ${q.ans.toUpperCase()}</span>`;
+    } else {
+      badge = isStudy ? '— No respost' : '— Saltada'; badgeCls = 'skipped';
+      ansInfo = `<span>Correcta: ${q.ans.toUpperCase()}</span>`;
+    }
+
+    div.innerHTML = `
+      <div class="review-header">
+        <div class="review-q"><span style="color:var(--muted);font-size:11px;font-family:var(--mono)">${i+1}. [${q.year} · ${topicLabel}] </span>${escHtml(shortQ)}</div>
+        <span class="review-badge ${badgeCls}">${badge}</span>
+      </div>
+      <div class="review-answers">${ansInfo}</div>`;
+    reviewList.appendChild(div);
+  });
+}
+
+retryBtn.addEventListener('click', () => {
+  state.questions = getFilteredQuestions();
+  state.idx = 0;
+  state.answers = state.questions.map(() => ({ answer: null, correct: null }));
+  state.confirmed = false;
+  state.studyRevealed = false;
+  state.studyStreak = 0;
+  const reveal = document.getElementById('study-reveal-block');
+  if (reveal) reveal.remove();
+  resultsArea.style.display = 'none';
+  quizArea.style.display = 'block';
+  renderQuestion();
+});
+
+backConfigBtn.addEventListener('click', () => {
+  resultsArea.style.display = 'none';
+  configArea.style.display = 'block';
+  updateQCount();
+});
+</script>
+</body>
+</html>
